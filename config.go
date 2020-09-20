@@ -3,21 +3,27 @@ package brisk
 const (
 
 	AUTH_TYPE_NO_AUTH 	= "none"
-	AUTH_TYPE_JWT	 	= "jwt_auth"
-	AUTH_TYPE_SIMPLE 	= "simple_auth"
+	AUTH_TYPE_AUTH	 	= "auth"
 
-	SERVER_ACK_MSG 		= "ok"
+	ENCODING_TYPE_JSON = "json"
+	ENCODING_TYPE_MSG_PACK = "msg_pack"
+
 )
 
 type AuthType string
+
+type Encoding string
 
 type Configuration struct {
 
 	// host address to start the websocket server
 	HostAddr			string
 
-	// authentication type to choose from when clients connect
+	// authentication type to choose from when commonClients connect
 	AuthenticationType AuthType
+
+	// configure the message format to use with the server
+	AcceptMessageEncoding Encoding
 
 	// configure this to receive server acknowledgment
 	SendAcknowledgement	bool
@@ -40,13 +46,14 @@ type Configuration struct {
 
 // create a Configuration object with the given details
 func NewServerConfiguration(address string, auth AuthType,
-	ack bool, broadcastMessagesLimit int64, maxConcurrency int,
+	ack bool, encoding Encoding, broadcastMessagesLimit int64, maxConcurrency int,
 	logLevel int, reportCaller bool) *Configuration {
 
 	return &Configuration{
 		HostAddr:            address,
 		AuthenticationType:  auth,
 		SendAcknowledgement: ack,
+		AcceptMessageEncoding: encoding,
 		BroadcastMessagesLimit: broadcastMessagesLimit,
 		MaxThreadPoolConcurrency: maxConcurrency,
 		LogLevel: logLevel,
@@ -60,6 +67,7 @@ func DefaultServerConfiguration() *Configuration {
 		HostAddr:                 "0.0.0.0:8080",
 		AuthenticationType:       AUTH_TYPE_NO_AUTH,
 		SendAcknowledgement:      false,
+		AcceptMessageEncoding: 	  ENCODING_TYPE_JSON,
 		BroadcastMessagesLimit:   1000,
 		MaxThreadPoolConcurrency: 50000,
 		LogLevel:                 ErrorLevel,

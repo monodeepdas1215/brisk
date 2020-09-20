@@ -14,9 +14,9 @@ type socketClient struct {
 	authenticated bool
 }
 
-func newSocketClient(socketObj *net.Conn) *socketClient {
+func newSocketClient(tmpId string, socketObj *net.Conn) *socketClient {
 	return &socketClient{
-		Id:            "",
+		Id:            tmpId,
 		socket:        socketObj,
 		authenticated: false,
 	}

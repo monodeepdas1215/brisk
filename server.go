@@ -14,6 +14,7 @@ type SocketServer struct {
 	*clientsHub
 	*ServerCallbacks
 	*core.Splash
+	encoder IEncoder
 }
 
 // starts with a basic configuration setting
@@ -31,6 +32,17 @@ func BasicSocketServer(config *Configuration) *SocketServer {
 		ServerCallbacks: nil,
 		Splash:          core.NewSplashPool(config.RequestsBufferSize, config.MaxThreadPoolConcurrency, core.ErrorLevel),
 	}
+
+	var appEncoder IEncoder
+
+	switch obj.AcceptMessageEncoding {
+	case ENCODING_TYPE_JSON:
+		appEncoder = &JsonEncoder{}
+	case ENCODING_TYPE_MSG_PACK:
+		panic("encoding using msg_pack has not been implemented yet")
+	}
+	obj.encoder = appEncoder
+
 	return obj
 }
 
@@ -97,19 +109,17 @@ func (ss *SocketServer) startServerLoop() {
 		AppLogger.logger.Infof("connection from Client(%s) upgraded successfully. HandshakeObj: ", conn.RemoteAddr(), handshakeObj)
 
 		id := uuid.New().String()
-		ss.addClient(id, &conn)
+
+		incomingClient := newSocketClient(id, &conn)
+		ss.addClient(incomingClient)
 
 		// trigger the callback function
-		// TODO convert this to worker pool
-		if ss.OnClientConnected != nil {
-			go ss.OnClientConnected(id)
-		}
+		ss.Splash.AddWorkRequest(&onClientConnectedWorkReq{id: id})
 
-		// handling a particular client in a new loop
+		// handling a particular incomingClient in a new loop
 		ss.Splash.AddWorkRequest(&handleMessagesWorkReq{
-			clientId: id,
-			conn:     &conn,
-			ss: ss,
+			client: incomingClient,
+			ss:     ss,
 		})
 	}
 }
@@ -159,49 +169,21 @@ func (ss *SocketServer) tcpConnectionUpgrader() *ws.Upgrader {
 	}
 }
 
-type handleMessagesWorkReq struct {
-	clientId string
-	conn *net.Conn
-	ss	 *SocketServer
-}
+// if enabled this function sends an acknowledgment back to the connected client upon receiving data
+func (ss *SocketServer) sendAcknowledgement(conn *net.Conn, msg *Message) {
 
-func (hm *handleMessagesWorkReq) Execute() {
+	// if acknowledgement is enabled
+	if ss.SendAcknowledgement {
 
-	defer hm.ss.removeClient(hm.clientId, hm.ss.OnClientDisconnected)
+		data := ss.encoder.Encode(*msg)
+		if data == nil {
+			return
+		}
 
-	// waiting for the messages from client
-	for {
-
-		message, op, err := wsutil.ReadClientData(*hm.conn)
+		err := wsutil.WriteServerMessage(*conn, ws.OpText, data)
 		if err != nil {
-			AppLogger.logger.Errorln("error occurred while reading client data: ", err)
-			break
+			// log the error which triggered closing the connection
+			AppLogger.logger.Errorln("error occurred while sending server reply: ", err)
 		}
-
-		if op == ws.OpClose {
-			break
-		}
-
-		if op == ws.OpPing {
-			// TODO implement a ping pong functionality
-		}
-
-		AppLogger.logger.Infoln(string(message))
-
-
 	}
 }
-
-func (hm *handleMessagesWorkReq) GetId() string {
-	return hm.clientId + " handleMessagesWorkRequest"
-}
-
-//// handleMessagesWorkReq is the function which deals with receiving server messages from respective clients
-//// and handle their authentication accordingly
-//// if Auth is enabled from the server then authenticate the clients first before letting them exchange data
-//// drop their connection otherwise.
-//func (ss *SocketServer) handleMessagesWorkReq(clientId string, conn *net.Conn) {
-//
-//	defer ss.removeClient(cli)
-//
-//}

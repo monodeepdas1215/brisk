@@ -2,18 +2,16 @@ package brisk
 
 import "github.com/gobwas/ws"
 
-type ServerEvent string
-
 type ServerCallbacks struct {
 
 	// called after client is connected to the server
 	OnClientConnected		func(clientId string)
 
 	// authentication handler callback
-	AuthHandler				func(clientId string, event ServerEvent, payload []byte) bool
+	AuthHandler				func(clientId string, msg Message) (bool, string)
 
 	// on message is received
-	OnMessageReceived		func(clientId string, event ServerEvent, payload []byte, err error)
+	OnMessageReceived		func(clientId string, msg Message, err error)
 
 	// after the client is disconnected
 	OnClientDisconnected	func(clientId string, err error)
