@@ -195,13 +195,3 @@ func (hm *handleMessagesWorkReq) Execute() {
 func (hm *handleMessagesWorkReq) GetId() string {
 	return hm.clientId + " handleMessagesWorkRequest"
 }
-
-//// handleMessagesWorkReq is the function which deals with receiving server messages from respective clients
-//// and handle their authentication accordingly
-//// if Auth is enabled from the server then authenticate the clients first before letting them exchange data
-//// drop their connection otherwise.
-//func (ss *SocketServer) handleMessagesWorkReq(clientId string, conn *net.Conn) {
-//
-//	defer ss.removeClient(cli)
-//
-//}
