@@ -7,22 +7,6 @@ import (
 	"net/http"
 )
 
-// work request to callback the on client connected function
-type onClientConnectedWorkReq struct {
-	id string
-	ss *SocketServer
-}
-
-func (occ *onClientConnectedWorkReq) Execute() {
-	if occ.ss.OnClientConnected != nil {
-		occ.ss.OnClientConnected(occ.id)
-	}
-}
-
-func (occ *onClientConnectedWorkReq) GetId() string {
-	return "on client connected work req"
-}
-
 
 // handles the entire cycle of communication for a websocket connection after it is connected to the server
 type handleMessagesWorkReq struct {
@@ -73,7 +57,7 @@ func (hm *handleMessagesWorkReq) Execute() {
 		}
 
 		// if auth is configured and client not authenticated then perform authentication
-		if hm.ss.AuthenticationType != AUTH_TYPE_NO_AUTH && !hm.client.GetAuthenticationStatus() {
+		if hm.ss.AuthHandler != nil && !hm.client.GetAuthenticationStatus() {
 
 			authResult, clientId := hm.ss.AuthHandler(hm.client.Id, *decodedMessage)
 			if authResult {
@@ -158,4 +142,21 @@ func (mr *msgReceivedCallbackWorkReq) Execute() {
 
 func (mr *msgReceivedCallbackWorkReq) GetId() string {
 	return "message received callback"
+}
+
+// work request to send message to client
+type sendMessageWorkReq struct {
+	clientId string
+	code ws.OpCode
+	ss *SocketServer
+	msg Message
+}
+
+func (sm *sendMessageWorkReq) Execute() {
+	data := sm.ss.encoder.Encode(sm.msg)
+	sm.ss.pushToClient(sm.clientId, data, sm.code)
+}
+
+func (ss *sendMessageWorkReq) GetId() string {
+	return "send_message_work_req"
 }

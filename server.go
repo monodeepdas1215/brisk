@@ -20,10 +20,6 @@ type SocketServer struct {
 // starts with a basic configuration setting
 func BasicSocketServer(config *Configuration) *SocketServer {
 
-	if config == nil {
-		config = DefaultServerConfiguration()
-	}
-
 	InitLogger(config.LogLevel, config.LoggerReportCaller)
 
 	obj := &SocketServer{
@@ -59,10 +55,6 @@ func (ss *SocketServer) StartListening() {
 	// doing all the checks here before starting
 	if ss.ServerCallbacks == nil {
 		panic("server cannot start without the callbacks initialized to valid handler functions")
-	}
-
-	if ss.AuthenticationType != AUTH_TYPE_NO_AUTH && ss.AuthHandler == nil {
-		panic("need to specify a AuthHandler function as the AuthenticationType is not none")
 	}
 
 	// increasing ulimit to accept more than 1024 connections
@@ -112,9 +104,10 @@ func (ss *SocketServer) startServerLoop() {
 
 		incomingClient := newSocketClient(id, &conn)
 		ss.addClient(incomingClient)
-
-		// trigger the callback function
-		ss.Splash.AddWorkRequest(&onClientConnectedWorkReq{id: id})
+		
+		if ss.OnClientConnected != nil {
+			ss.OnClientConnected(id)
+		}
 
 		// handling a particular incomingClient in a new loop
 		ss.Splash.AddWorkRequest(&handleMessagesWorkReq{
@@ -186,4 +179,22 @@ func (ss *SocketServer) sendAcknowledgement(conn *net.Conn, msg *Message) {
 			AppLogger.logger.Errorln("error occurred while sending server reply: ", err)
 		}
 	}
+}
+
+func (ss *SocketServer) SendMessage(asyncSend bool, clientId string, msg Message, opCode ws.OpCode) {
+
+	if asyncSend {
+
+		ss.AddWorkRequest(&sendMessageWorkReq{
+			clientId: clientId,
+			code:     opCode,
+			ss:       ss,
+			msg:      msg,
+		})
+
+	} else {
+		data := ss.encoder.Encode(msg)
+		ss.pushToClient(clientId, data, opCode)
+	}
+
 }

@@ -96,9 +96,10 @@ func (ch *clientsHub) pushToClient(clientId string, data []byte, opCode ws.OpCod
 	}
 	ch.RUnlock()
 
-	// TODO make this function call via threadpool
 	if client != nil {
-		go client.PushData(data, opCode)
+		if err := client.PushData(data, opCode); err != nil {
+			AppLogger.logger.Errorln("error occurred while pushing data to client: ", err)
+		}
 	}
 	return nil
 }

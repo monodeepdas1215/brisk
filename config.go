@@ -2,9 +2,6 @@ package brisk
 
 const (
 
-	AUTH_TYPE_NO_AUTH 	= "none"
-	AUTH_TYPE_AUTH	 	= "auth"
-
 	ENCODING_TYPE_JSON = "json"
 	ENCODING_TYPE_MSG_PACK = "msg_pack"
 
@@ -18,9 +15,6 @@ type Configuration struct {
 
 	// host address to start the websocket server
 	HostAddr			string
-
-	// authentication type to choose from when commonClients connect
-	AuthenticationType AuthType
 
 	// configure the message format to use with the server
 	AcceptMessageEncoding Encoding
@@ -44,33 +38,40 @@ type Configuration struct {
 	LoggerReportCaller		bool
 }
 
-// create a Configuration object with the given details
-func NewServerConfiguration(address string, auth AuthType,
-	ack bool, encoding Encoding, broadcastMessagesLimit int64, maxConcurrency int,
-	logLevel int, reportCaller bool) *Configuration {
-
-	return &Configuration{
-		HostAddr:            address,
-		AuthenticationType:  auth,
-		SendAcknowledgement: ack,
-		AcceptMessageEncoding: encoding,
-		BroadcastMessagesLimit: broadcastMessagesLimit,
-		MaxThreadPoolConcurrency: maxConcurrency,
-		LogLevel: logLevel,
-		LoggerReportCaller: reportCaller,
-	}
-}
-
 // create a default Configuration object
-func DefaultServerConfiguration() *Configuration {
+func DefaultServerConfiguration(bindAddr string) *Configuration {
 	return &Configuration{
-		HostAddr:                 "0.0.0.0:8080",
-		AuthenticationType:       AUTH_TYPE_NO_AUTH,
+		HostAddr:                 bindAddr,
 		SendAcknowledgement:      false,
 		AcceptMessageEncoding: 	  ENCODING_TYPE_JSON,
-		BroadcastMessagesLimit:   1000,
+		BroadcastMessagesLimit:   100,
 		MaxThreadPoolConcurrency: 50000,
 		LogLevel:                 ErrorLevel,
 		LoggerReportCaller:       false,
 	}
+}
+
+func (cfg *Configuration) SetSendAcknowledgment(flag bool) *Configuration {
+	cfg.SendAcknowledgement = flag
+	return cfg
+}
+
+func (cfg *Configuration) SetAcceptMessageEncoding(encoding Encoding) *Configuration {
+	cfg.AcceptMessageEncoding = encoding
+	return cfg
+}
+
+func (cfg *Configuration) SetLogLevel(logLevel int) *Configuration {
+	cfg.LogLevel = logLevel
+	return cfg
+}
+
+func (cfg *Configuration) SetMaxThreadPoolConcurrency(concurrency int) *Configuration {
+	cfg.MaxThreadPoolConcurrency = concurrency
+	return cfg
+}
+
+func (cfg *Configuration) SetBroadcastMessagesLimit(limit int64) *Configuration {
+	cfg.BroadcastMessagesLimit = limit
+	return cfg
 }
