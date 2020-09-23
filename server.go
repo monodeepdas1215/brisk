@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/monodeepdas1215/splash/core"
 	"net"
-	"syscall"
 )
 
 type SocketServer struct {
@@ -57,16 +56,19 @@ func (ss *SocketServer) StartListening() {
 		panic("server cannot start without the callbacks initialized to valid handler functions")
 	}
 
-	// increasing ulimit to accept more than 1024 connections
-	var rLimit syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
-		panic(err)
-	}
-	rLimit.Cur = rLimit.Max
-	err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if err != nil {
-		panic(err)
-	}
+	// TODO increase ulimit
+	//var rLimit syscall.Rlimit
+	//if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
+	//	panic(err)
+	//}
+	//rLimit.Cur = rLimit.Max
+	//err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	// starting the splash threadpool
+	ss.StartPool()
 
 	// finally starting the server loop
 	ss.startServerLoop()
@@ -92,13 +94,11 @@ func (ss *SocketServer) startServerLoop() {
 		AppLogger.logger.Infoln("incoming connection from: ", conn.RemoteAddr())
 
 		// upgrade the tcp connection to websocket protocol
-		handshakeObj, err := ss.tcpConnectionUpgrader().Upgrade(conn)
+		_, err = ss.tcpConnectionUpgrader().Upgrade(conn)
 		if err != nil {
 			AppLogger.logger.Errorln("error occurred while upgrading TCP connection to websocket: ", err)
 			continue
 		}
-
-		AppLogger.logger.Infof("connection from Client(%s) upgraded successfully. HandshakeObj: ", conn.RemoteAddr(), handshakeObj)
 
 		id := uuid.New().String()
 
