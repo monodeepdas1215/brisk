@@ -1,4 +1,4 @@
-package brisk
+package core
 
 import (
 	"github.com/gobwas/ws"
@@ -194,6 +194,9 @@ func (ss *SocketServer) SendMessage(asyncSend bool, clientId string, msg Message
 
 	} else {
 		data := ss.encoder.Encode(msg)
+		if data == nil {
+			return
+		}
 		ss.pushToClient(clientId, data, opCode)
 	}
 

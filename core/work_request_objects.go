@@ -1,4 +1,4 @@
-package brisk
+package core
 
 import (
 	"github.com/gobwas/ws"
@@ -16,7 +16,12 @@ type handleMessagesWorkReq struct {
 
 func (hm *handleMessagesWorkReq) Execute() {
 
-	defer hm.ss.removeClient(hm.client.Id, hm.ss.OnClientDisconnected)
+	defer func() {
+
+		hm.ss.pushToClient(hm.client.Id, nil, ws.OpClose)
+		hm.ss.removeClient(hm.client.Id, hm.ss.OnClientDisconnected)
+
+	}()
 
 	// waiting for the messages from client
 	for {
@@ -29,31 +34,32 @@ func (hm *handleMessagesWorkReq) Execute() {
 		}
 
 		if op == ws.OpClose {
+			hm.ss.SendMessage(false, hm.client.Id, Message{}, ws.OpClose)
 			break
 		}
 
 		if op == ws.OpPing {
-			// TODO implement a ping pong functionality
+			hm.ss.SendMessage(false, hm.client.Id, Message{}, ws.OpPong)
+			continue
 		}
-
-		AppLogger.logger.Debugln("message from client: ", string(message))
 
 		// converting bytes into configured message type
 		decodedMessage, err := hm.ss.encoder.Decode(message)
 		if err != nil {
 
+			// notify the client about the error
 			hm.ss.AddWorkRequest(&serverReplyWorkReq{
 				obj: hm.client.socket,
 				msg: &Message{
 					Event:   "error",
 					Payload: map[string]interface{}{
-						"code": http.StatusInternalServerError,
+						"code": http.StatusBadRequest,
 						"message": err.Error(),
 					},
 				},
 				ss:  hm.ss,
 			})
-			break
+			continue
 		}
 
 		// if auth is configured and client not authenticated then perform authentication
@@ -73,11 +79,8 @@ func (hm *handleMessagesWorkReq) Execute() {
 						"message": "could not authenticate client",
 					},
 				}
-				hm.ss.AddWorkRequest(&serverReplyWorkReq{
-					obj: hm.client.socket,
-					msg: msg,
-					ss:  hm.ss,
-				})
+
+				hm.ss.sendAcknowledgement(hm.client.socket, msg)
 				break
 			}
 
@@ -91,18 +94,20 @@ func (hm *handleMessagesWorkReq) Execute() {
 				ss:  hm.ss,
 			})
 
-			// callback
-			hm.ss.AddWorkRequest(&serverReplyWorkReq{
-				obj: hm.client.socket,
-				msg: &Message{
-					Event:   "reply",
-					Payload: map[string]interface{}{
-						"code": 200,
-						"message": "ok",
+			if hm.ss.SendAcknowledgement {
+				// callback
+				hm.ss.AddWorkRequest(&serverReplyWorkReq{
+					obj: hm.client.socket,
+					msg: &Message{
+						Event:   "ack",
+						Payload: map[string]interface{}{
+							"code": 200,
+							"message": "ok",
+						},
 					},
-				},
-				ss:  hm.ss,
-			})
+					ss:  hm.ss,
+				})
+			}
 		}
 	}
 }
@@ -130,10 +135,10 @@ func (ue *serverReplyWorkReq) GetId() string {
 
 // work request to call back the function
 type msgReceivedCallbackWorkReq struct {
-	id string
+	id  string
 	msg Message
 	err error
-	ss *SocketServer
+	ss  *SocketServer
 }
 
 func (mr *msgReceivedCallbackWorkReq) Execute() {
@@ -147,9 +152,9 @@ func (mr *msgReceivedCallbackWorkReq) GetId() string {
 // work request to send message to client
 type sendMessageWorkReq struct {
 	clientId string
-	code ws.OpCode
-	ss *SocketServer
-	msg Message
+	code     ws.OpCode
+	ss       *SocketServer
+	msg      Message
 }
 
 func (sm *sendMessageWorkReq) Execute() {
@@ -157,6 +162,6 @@ func (sm *sendMessageWorkReq) Execute() {
 	sm.ss.pushToClient(sm.clientId, data, sm.code)
 }
 
-func (ss *sendMessageWorkReq) GetId() string {
+func (sm *sendMessageWorkReq) GetId() string {
 	return "send_message_work_req"
 }

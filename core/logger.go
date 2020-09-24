@@ -1,4 +1,4 @@
-package brisk
+package core
 
 import (
 	"github.com/sirupsen/logrus"

@@ -1,4 +1,4 @@
-package brisk
+package core
 
 import (
 	"github.com/gobwas/ws"
@@ -51,7 +51,7 @@ func (ch *clientsHub) addClient(client *socketClient) {
 	ch.Unlock()
 }
 
-// removes the client from hub and calls the callback function
+// finds the client from the clientHub, closes the socket connection and then removes it from clientHub
 func (ch *clientsHub) removeClient(id string, callbackFunc func(clientId string, err error)) {
 
 	var client *socketClient = nil
@@ -63,17 +63,15 @@ func (ch *clientsHub) removeClient(id string, callbackFunc func(clientId string,
 		if err = val.closeConnection(); err != nil {
 			AppLogger.logger.Errorf("error occurred while trying to close socket connection for client: %s  :  ", val.Id, err)
 			AppLogger.logger.Errorf("could not remove client: %s", val.Id)
-		} else {
-			delete(ch.commonClients, val.Id)
 		}
+		delete(ch.commonClients, val.Id)
 	} else if val, ok := ch.authenticatedClients[id]; ok {
 		client = val
 		if err = val.closeConnection(); err != nil {
 			AppLogger.logger.Errorf("error occurred while trying to close socket connection for client: %s  :  ", val.Id, err)
 			AppLogger.logger.Errorf("could not remove client: %s", val.Id)
-		} else {
-			delete(ch.authenticatedClients, val.Id)
 		}
+		delete(ch.authenticatedClients, val.Id)
 	}
 	ch.Unlock()
 
@@ -108,13 +106,14 @@ func (ch *clientsHub) pushToClient(clientId string, data []byte, opCode ws.OpCod
 func (ch *clientsHub) authenticateClient(oldClientId, newClientId string) {
 
 	ch.RLock()
-	if _, ok := ch.commonClients[oldClientId]; ok {
+	if val, ok := ch.commonClients[oldClientId]; ok {
+
+		// move the client to authenticated client
+		ch.authenticatedClients[newClientId] = val
+		val.Authenticate(newClientId)
 
 		// delete from unAuthenticated Clients
 		delete(ch.commonClients, oldClientId)
-
-		// adding to authenticated Clients
-		ch.commonClients[newClientId].Authenticate(newClientId)
 	}
 	ch.RUnlock()
 }

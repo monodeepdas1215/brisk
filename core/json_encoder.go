@@ -1,4 +1,4 @@
-package brisk
+package core
 
 import "encoding/json"
 

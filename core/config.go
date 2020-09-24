@@ -1,4 +1,4 @@
-package brisk
+package core
 
 const (
 
@@ -43,7 +43,7 @@ func DefaultServerConfiguration(bindAddr string) *Configuration {
 	return &Configuration{
 		HostAddr:                 bindAddr,
 		SendAcknowledgement:      false,
-		AcceptMessageEncoding: 	  ENCODING_TYPE_JSON,
+		AcceptMessageEncoding:    ENCODING_TYPE_JSON,
 		BroadcastMessagesLimit:   100,
 		MaxThreadPoolConcurrency: 50000,
 		LogLevel:                 ErrorLevel,
