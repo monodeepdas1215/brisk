@@ -27,7 +27,7 @@ func newClientsHub(broadcastMessagesLimit int64) *clientsHub {
 }
 
 
-// get a particular client
+// get a particular client by search it through its id
 func (ch *clientsHub) getClient(id string) *socketClient {
 
 	var res *socketClient = nil
@@ -63,6 +63,8 @@ func (ch *clientsHub) removeClient(id string, callbackFunc func(clientId string,
 		if err = val.closeConnection(); err != nil {
 			AppLogger.logger.Errorf("error occurred while trying to close socket connection for client: %s  :  ", val.Id, err)
 			AppLogger.logger.Errorf("could not remove client: %s", val.Id)
+		} else {
+			AppLogger.logger.Infof("connection to client: %s closed\n", id)
 		}
 		delete(ch.commonClients, val.Id)
 	} else if val, ok := ch.authenticatedClients[id]; ok {
@@ -70,6 +72,8 @@ func (ch *clientsHub) removeClient(id string, callbackFunc func(clientId string,
 		if err = val.closeConnection(); err != nil {
 			AppLogger.logger.Errorf("error occurred while trying to close socket connection for client: %s  :  ", val.Id, err)
 			AppLogger.logger.Errorf("could not remove client: %s", val.Id)
+		} else {
+			AppLogger.logger.Infof("connection to client: %s closed\n", id)
 		}
 		delete(ch.authenticatedClients, val.Id)
 	}
@@ -102,7 +106,10 @@ func (ch *clientsHub) pushToClient(clientId string, data []byte, opCode ws.OpCod
 	return nil
 }
 
-// removes client from the un authenticated map to authenticated map and assigns it with the given client id
+/*
+if the given oldClientId is found in the common clients map then move it to authenticatedClients map and then remove
+the entry from the common clients map
+*/
 func (ch *clientsHub) authenticateClient(oldClientId, newClientId string) {
 
 	ch.RLock()

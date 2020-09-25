@@ -17,10 +17,8 @@ type handleMessagesWorkReq struct {
 func (hm *handleMessagesWorkReq) Execute() {
 
 	defer func() {
-
 		hm.ss.pushToClient(hm.client.Id, nil, ws.OpClose)
 		hm.ss.removeClient(hm.client.Id, hm.ss.OnClientDisconnected)
-
 	}()
 
 	// waiting for the messages from client
