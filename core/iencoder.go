@@ -1,4 +1,4 @@
-package main
+package core
 
 type IEncoder interface {
 	Decode([]byte) (*Message, error)
