@@ -1,4 +1,4 @@
-package core
+package server
 
 import (
 	"github.com/sirupsen/logrus"
@@ -13,32 +13,29 @@ const (
 	ErrorLevel = 0
 )
 
-var AppLogger Logger
 var once sync.Once
+var AppLogger *logrus.Logger
 
-type Logger struct {
-	logger *logrus.Logger
-}
 
 func InitLogger(logLevel int, reportCaller bool) {
 
 	once.Do(func() {
 
-		AppLogger = Logger{logger: &logrus.Logger {
+		AppLogger = &logrus.Logger {
 			Out:          os.Stdout,
 			Hooks:        make(logrus.LevelHooks),
 			Formatter:    new(logrus.TextFormatter),
 			ReportCaller: reportCaller,
 			ExitFunc:     os.Exit,
-		}}
+		}
 		if logLevel == DebugLevel {
-			AppLogger.logger.Level = logrus.DebugLevel
+			AppLogger.Level = logrus.DebugLevel
 		} else if logLevel == InfoLevel {
-			AppLogger.logger.Level = logrus.InfoLevel
+			AppLogger.Level = logrus.InfoLevel
 		} else if logLevel == WarningLevel {
-			AppLogger.logger.Level = logrus.WarnLevel
+			AppLogger.Level = logrus.WarnLevel
 		} else {
-			AppLogger.logger.Level = logrus.ErrorLevel
+			AppLogger.Level = logrus.ErrorLevel
 		}
 	})
 }

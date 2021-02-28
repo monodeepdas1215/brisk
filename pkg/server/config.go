@@ -1,4 +1,4 @@
-package core
+package server
 
 const (
 
@@ -15,6 +15,8 @@ type Configuration struct {
 
 	// host address to start the websocket server
 	HostAddr			string
+
+	RedisHostAddr		string
 
 	// configure the message format to use with the server
 	AcceptMessageEncoding Encoding
@@ -42,6 +44,7 @@ type Configuration struct {
 func DefaultServerConfiguration(bindAddr string) *Configuration {
 	return &Configuration{
 		HostAddr:                 bindAddr,
+		RedisHostAddr: "localhost:6379",
 		SendAcknowledgement:      false,
 		AcceptMessageEncoding:    ENCODING_TYPE_JSON,
 		BroadcastMessagesLimit:   100,
@@ -49,6 +52,11 @@ func DefaultServerConfiguration(bindAddr string) *Configuration {
 		LogLevel:                 ErrorLevel,
 		LoggerReportCaller:       false,
 	}
+}
+
+func (cfg *Configuration) SetRedisHostAddr(host string) *Configuration {
+	cfg.RedisHostAddr = host
+	return cfg
 }
 
 func (cfg *Configuration) SetSendAcknowledgment(flag bool) *Configuration {
